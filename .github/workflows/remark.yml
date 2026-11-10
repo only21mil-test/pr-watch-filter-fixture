@@ -1,0 +1,37 @@
+name: remark
+on:
+  workflow_dispatch:
+    inputs:
+      pr:
+        required: true
+      kind:
+        required: true
+        type: choice
+        options: [comment, review, inline]
+      body:
+        required: true
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+jobs:
+  remark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PR: ${{ inputs.pr }}
+      KIND: ${{ inputs.kind }}
+      BODY: ${{ inputs.body }}
+    steps:
+      - name: post as the workflow identity
+        run: |
+          set -eu
+          repo="$GITHUB_REPOSITORY"
+          case "$KIND" in
+            comment) gh api "repos/$repo/issues/$PR/comments" -f body="$BODY" --jq .id ;;
+            review) gh api "repos/$repo/pulls/$PR/reviews" -f event=COMMENT -f body="$BODY" --jq .id ;;
+            inline)
+              sha=$(gh api "repos/$repo/pulls/$PR" --jq .head.sha)
+              gh api "repos/$repo/pulls/$PR/comments" -f body="$BODY" -f commit_id="$sha" -f path=notes.md -F line=1 -f side=RIGHT --jq .id ;;
+          esac

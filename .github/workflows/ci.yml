@@ -1,0 +1,11 @@
+name: ci
+on:
+  pull_request:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v4
+      - name: fails while a FAIL file exists
+        run: test ! -f FAIL
